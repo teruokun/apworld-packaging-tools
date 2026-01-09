@@ -1,0 +1,1501 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "APWorld Package Index",
+    "description": "Repository server for APWorld package hosting and discovery",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/v1/packages": {
+      "get": {
+        "tags": [
+          "packages"
+        ],
+        "summary": "List Packages",
+        "description": "List all packages with pagination.\n\nReturns a paginated list of all packages in the repository,\nsorted by name alphabetically.",
+        "operationId": "list_packages_v1_packages_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page",
+              "default": 20,
+              "title": "Per Page"
+            },
+            "description": "Items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/search": {
+      "get": {
+        "tags": [
+          "packages"
+        ],
+        "summary": "Search Packages",
+        "description": "Search packages by name, keyword, author, or game.\n\nSupports filtering by:\n- q: Free text search across name, display_name, description, and keywords\n- game: Filter by game name (from version metadata)\n- author: Filter by author name\n- compatible_with: Filter by Core AP version compatibility",
+        "operationId": "search_packages_v1_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Search query",
+              "default": "",
+              "title": "Q"
+            },
+            "description": "Search query"
+          },
+          {
+            "name": "game",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by game name",
+              "title": "Game"
+            },
+            "description": "Filter by game name"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by author name",
+              "title": "Author"
+            },
+            "description": "Filter by author name"
+          },
+          {
+            "name": "compatible_with",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by Core AP version compatibility",
+              "title": "Compatible With"
+            },
+            "description": "Filter by Core AP version compatibility"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page",
+              "default": 20,
+              "title": "Per Page"
+            },
+            "description": "Items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/packages/{name}": {
+      "get": {
+        "tags": [
+          "packages"
+        ],
+        "summary": "Get Package",
+        "description": "Get full metadata for a specific package.\n\nReturns detailed package information including all versions,\nauthors, keywords, and download statistics.",
+        "operationId": "get_package_v1_packages__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageMetadata"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/packages/{name}/versions": {
+      "get": {
+        "tags": [
+          "packages"
+        ],
+        "summary": "List Versions",
+        "description": "List all versions of a package.\n\nReturns all versions sorted by publication date (newest first).\nBy default, yanked versions are excluded.",
+        "operationId": "list_versions_v1_packages__name__versions_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "include_yanked",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include yanked versions",
+              "default": false,
+              "title": "Include Yanked"
+            },
+            "description": "Include yanked versions"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/packages/{name}/{version}": {
+      "get": {
+        "tags": [
+          "packages"
+        ],
+        "summary": "Get Version",
+        "description": "Get metadata for a specific version.\n\nReturns detailed version information including all distributions\nand their download URLs.",
+        "operationId": "get_version_v1_packages__name___version__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionMetadata"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/index.json": {
+      "get": {
+        "tags": [
+          "packages"
+        ],
+        "summary": "Get Index",
+        "description": "Get full package index for offline tooling.\n\nReturns a complete index of all packages and versions,\nsuitable for offline package resolution and caching.",
+        "operationId": "get_index_v1_index_json_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/packages/{name}/{version}/download/{filename}": {
+      "get": {
+        "tags": [
+          "download"
+        ],
+        "summary": "Download Distribution",
+        "description": "Download a distribution file.\n\nReturns the file with SHA256 checksum in X-Checksum-SHA256 header.\nAlso includes Content-Disposition header for proper filename handling.\n\nThe download count is incremented for each successful download.",
+        "operationId": "download_distribution_v1_packages__name___version__download__filename__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version"
+            }
+          },
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filename"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/packages/{name}/upload": {
+      "post": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "Upload Package",
+        "description": "Upload a new package version.\n\nRequires authentication with 'upload' scope.\nValidates manifest and checksums.\nFirst uploader becomes package owner.",
+        "operationId": "upload_package_v1_packages__name__upload_post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "sha256",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sha256"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_package_v1_packages__name__upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/packages/{name}/{version}/yank": {
+      "delete": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "Yank Version",
+        "description": "Yank (soft-delete) a version.\n\nYanked versions are still downloadable but marked as deprecated.\nRequires authentication and package ownership.",
+        "operationId": "yank_version_v1_packages__name___version__yank_delete",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/YankRequest",
+                "default": {
+                  "reason": ""
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/packages/{name}/collaborators": {
+      "post": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "Add Collaborator",
+        "description": "Add a collaborator to a package.\n\nOnly package owners can add collaborators.",
+        "operationId": "add_collaborator_v1_packages__name__collaborators_post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollaboratorRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "List Collaborators",
+        "description": "List all collaborators for a package.",
+        "operationId": "list_collaborators_v1_packages__name__collaborators_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/packages/{name}/collaborators/{collaborator_id}": {
+      "delete": {
+        "tags": [
+          "upload"
+        ],
+        "summary": "Remove Collaborator",
+        "description": "Remove a collaborator from a package.\n\nOnly package owners can remove collaborators.\nCannot remove the last owner.",
+        "operationId": "remove_collaborator_v1_packages__name__collaborators__collaborator_id__delete",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "collaborator_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Collaborator Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Check Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuthorModel": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "AuthorModel",
+        "description": "Author information."
+      },
+      "Body_upload_package_v1_packages__name__upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_package_v1_packages__name__upload_post"
+      },
+      "CollaboratorRequest": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "publisher_type": {
+            "type": "string",
+            "title": "Publisher Type",
+            "default": "user"
+          },
+          "github_repository": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Github Repository"
+          },
+          "github_workflow": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Github Workflow"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id"
+        ],
+        "title": "CollaboratorRequest",
+        "description": "Request body for adding/removing collaborators."
+      },
+      "DistributionModel": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "platform_tag": {
+            "type": "string",
+            "title": "Platform Tag"
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "sha256",
+          "size",
+          "platform_tag"
+        ],
+        "title": "DistributionModel",
+        "description": "Distribution file information."
+      },
+      "DownloadStats": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Total downloads across all versions"
+          },
+          "recent": {
+            "type": "integer",
+            "title": "Recent",
+            "description": "Downloads in the last 30 days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "recent"
+        ],
+        "title": "DownloadStats",
+        "description": "Download statistics for a package."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IndexPackageEntry": {
+        "properties": {
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "latest_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Version"
+          },
+          "versions": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Versions",
+            "description": "Map of version string to version metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "display_name"
+        ],
+        "title": "IndexPackageEntry",
+        "description": "Package entry in the JSON index."
+      },
+      "IndexResponse": {
+        "properties": {
+          "packages": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/IndexPackageEntry"
+            },
+            "type": "object",
+            "title": "Packages",
+            "description": "Map of package name to package data"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "total_packages": {
+            "type": "integer",
+            "title": "Total Packages"
+          },
+          "total_versions": {
+            "type": "integer",
+            "title": "Total Versions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "packages",
+          "generated_at",
+          "total_packages",
+          "total_versions"
+        ],
+        "title": "IndexResponse",
+        "description": "Full package index for offline tooling."
+      },
+      "PackageListItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "latest_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Version"
+          },
+          "downloads": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DownloadStats"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "display_name"
+        ],
+        "title": "PackageListItem",
+        "description": "Brief package information for listing."
+      },
+      "PackageListResponse": {
+        "properties": {
+          "packages": {
+            "items": {
+              "$ref": "#/components/schemas/PackageListItem"
+            },
+            "type": "array",
+            "title": "Packages"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationInfo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "packages",
+          "pagination"
+        ],
+        "title": "PackageListResponse",
+        "description": "Response for package listing endpoint."
+      },
+      "PackageMetadata": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "homepage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Homepage"
+          },
+          "repository": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repository"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "authors": {
+            "items": {
+              "$ref": "#/components/schemas/AuthorModel"
+            },
+            "type": "array",
+            "title": "Authors"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords"
+          },
+          "latest_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Version"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/VersionListItem"
+            },
+            "type": "array",
+            "title": "Versions"
+          },
+          "downloads": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DownloadStats"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "display_name",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PackageMetadata",
+        "description": "Full package metadata."
+      },
+      "PaginationInfo": {
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Page",
+            "description": "Current page number"
+          },
+          "per_page": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Per Page",
+            "description": "Items per page"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "Total number of items"
+          },
+          "total_pages": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Pages",
+            "description": "Total number of pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page",
+          "per_page",
+          "total",
+          "total_pages"
+        ],
+        "title": "PaginationInfo",
+        "description": "Pagination metadata."
+      },
+      "SearchResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/PackageListItem"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "filters": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Filters"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results",
+          "query",
+          "total"
+        ],
+        "title": "SearchResponse",
+        "description": "Response for search endpoint."
+      },
+      "UploadResponse": {
+        "properties": {
+          "package": {
+            "type": "string",
+            "title": "Package"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "package",
+          "version",
+          "filename",
+          "sha256",
+          "message"
+        ],
+        "title": "UploadResponse",
+        "description": "Response for successful upload."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VersionListItem": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          },
+          "yanked": {
+            "type": "boolean",
+            "title": "Yanked",
+            "default": false
+          },
+          "pure_python": {
+            "type": "boolean",
+            "title": "Pure Python",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "published_at"
+        ],
+        "title": "VersionListItem",
+        "description": "Brief version information for listing."
+      },
+      "VersionListResponse": {
+        "properties": {
+          "package_name": {
+            "type": "string",
+            "title": "Package Name"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/VersionListItem"
+            },
+            "type": "array",
+            "title": "Versions"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "package_name",
+          "versions",
+          "total"
+        ],
+        "title": "VersionListResponse",
+        "description": "Response for version listing endpoint."
+      },
+      "VersionMetadata": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "game": {
+            "type": "string",
+            "title": "Game"
+          },
+          "minimum_ap_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum Ap Version"
+          },
+          "maximum_ap_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Ap Version"
+          },
+          "pure_python": {
+            "type": "boolean",
+            "title": "Pure Python",
+            "default": true
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          },
+          "yanked": {
+            "type": "boolean",
+            "title": "Yanked",
+            "default": false
+          },
+          "yank_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yank Reason"
+          },
+          "distributions": {
+            "items": {
+              "$ref": "#/components/schemas/DistributionModel"
+            },
+            "type": "array",
+            "title": "Distributions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "game",
+          "published_at"
+        ],
+        "title": "VersionMetadata",
+        "description": "Full version metadata."
+      },
+      "YankRequest": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "YankRequest",
+        "description": "Request body for yanking a version."
+      }
+    }
+  }
+}

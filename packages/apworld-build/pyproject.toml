@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "apworld-build"
+version = "0.1.0"
+description = "Distribution building for APWorld packages (.apworld, .tar.gz)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = ["archipelago", "apworld", "build", "packaging"]
+authors = [
+  { name = "Archipelago Contributors" },
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+  "apworld-version>=0.1.0",
+  "apworld-manifest>=0.1.0",
+  "apworld-vendor>=0.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0",
+  "hypothesis>=6.0",
+]
+
+[project.urls]
+Repository = "https://github.com/ArchipelagoMW/archipelago-repository"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/apworld_build"]

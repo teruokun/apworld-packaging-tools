@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "apworld-*-v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install build tools
+        run: pip install build twine
+      
+      - name: Extract package name from tag
+        id: extract
+        run: |
+          TAG="${{ github.ref_name }}"
+          # Tag format: apworld-{package}-v{version}
+          PACKAGE=$(echo "$TAG" | sed -E 's/apworld-([a-z-]+)-v.*/\1/')
+          VERSION=$(echo "$TAG" | sed -E 's/apworld-[a-z-]+-v(.*)/\1/')
+          echo "package=$PACKAGE" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building package: $PACKAGE version: $VERSION"
+      
+      - name: Build package
+        run: |
+          cd packages/apworld-${{ steps.extract.outputs.package }}
+          python -m build
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ steps.extract.outputs.package }}
+          path: packages/apworld-${{ steps.extract.outputs.package }}/dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: dist/
+      
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
