@@ -1,0 +1,177 @@
+# SPDX-License-Identifier: MIT
+# CI/CD workflow for {{game}} Island Package
+#
+# This workflow provides:
+# - Linting with ruff
+# - Type checking with mypy
+# - Cross-platform testing (Linux, macOS, Windows on x64 and ARM)
+# - Island binary builds
+# - Publishing to Archipelago repository (on release)
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  release:
+    types: [published]
+
+# Required for trusted publishing to Archipelago repository
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  # ==========================================================================
+  # Linting - Check code style and formatting
+  # ==========================================================================
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff check
+        run: ruff check .
+
+      - name: Run ruff format check
+        run: ruff format --check .
+
+  # ==========================================================================
+  # Type Checking - Verify type annotations
+  # ==========================================================================
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install mypy
+          pip install -e .
+
+      - name: Run mypy
+        run: mypy src/
+
+  # ==========================================================================
+  # Testing - Cross-platform test matrix
+  # ==========================================================================
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest        # Linux x64
+          - ubuntu-24.04-arm     # Linux ARM64
+          - macos-latest         # macOS Apple Silicon
+          - macos-13             # macOS Intel
+          - windows-latest       # Windows x64
+          - windows-11-arm       # Windows ARM64
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-cov
+          pip install -e .
+
+      - name: Run tests
+        run: pytest --cov -v
+
+  # ==========================================================================
+  # Build - Create Island binary
+  # ==========================================================================
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install island-cli
+        run: pip install island-cli
+
+      - name: Build Island package
+        run: island build
+
+      - name: Upload Island artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: island
+          path: dist/*.island
+          if-no-files-found: error
+
+  # ==========================================================================
+  # Publishing to Archipelago Repository
+  # ==========================================================================
+  # This job publishes your Island package to https://apworlds.archipelago.gg
+  # using GitHub's trusted publishing (OIDC) for secure authentication.
+  #
+  # Setup Instructions:
+  # 1. Register your Island package at https://apworlds.archipelago.gg
+  # 2. Configure trusted publishing for your GitHub repository:
+  #    - Go to your package settings on the repository
+  #    - Add your GitHub repository as a trusted publisher
+  #    - Specify the workflow file name (ci.yml) and environment (archipelago-repository)
+  # 3. The workflow will automatically publish on new releases
+  #
+  # For more information on trusted publishing, see:
+  # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
+  # ==========================================================================
+  publish:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'release'
+    environment:
+      name: archipelago-repository
+      url: https://apworlds.archipelago.gg
+
+    steps:
+      - name: Download Island artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: island
+          path: dist/
+
+      # TODO: This is a placeholder step. Replace with actual publishing
+      # command once the Archipelago repository API is finalized.
+      #
+      # The publish command will use OIDC tokens for authentication,
+      # which are automatically provided by GitHub Actions when the
+      # id-token: write permission is set.
+      - name: Publish to Archipelago Repository
+        run: |
+          echo "Publishing to https://apworlds.archipelago.gg"
+          echo "Island file: $(ls dist/*.island)"
+          echo ""
+          echo "NOTE: This is a placeholder step."
+          echo "Actual publishing will be implemented when the repository API is available."
+          echo ""
+          echo "Future implementation will use the island-cli publish command:"
+          echo "  island publish dist/*.island"

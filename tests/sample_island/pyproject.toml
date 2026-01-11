@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sample-game"
+version = "1.0.0"
+description = "A sample Island package for testing the build system"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "Test Author", email = "test@example.com" },
+]
+keywords = ["archipelago", "sample"]
+
+# Required: at least one ap-island entry point
+[project.entry-points.ap-island]
+sample = "sample_game.world:SampleWorld"
+
+[tool.island]
+game = "Sample Game"
+minimum_ap_version = "0.5.0"

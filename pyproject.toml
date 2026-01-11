@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "archipelago-repository"
 version = "0.0.1"
-description = "APWorld packaging and repository tools for Archipelago multiworld randomizer (workspace root)"
+description = "Island packaging and repository tools for Archipelago multiworld randomizer (workspace root)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-keywords = ["archipelago", "apworld", "randomizer", "packaging", "repository"]
+keywords = ["archipelago", "island", "randomizer", "packaging", "repository"]
 authors = [
   { name = "Jeff Edwards", email = "jeffe@amazon.com" },
 ]
@@ -19,9 +19,9 @@ authors = [
 dependencies = []
 
 [project.urls]
-Documentation = "https://github.com/ArchipelagoMW/archipelago-repository#readme"
-Issues = "https://github.com/ArchipelagoMW/archipelago-repository/issues"
-Source = "https://github.com/ArchipelagoMW/archipelago-repository"
+Documentation = "https://github.com/teruokun/apworld-packaging-tools#readme"
+Issues = "https://github.com/teruokun/apworld-packaging-tools/issues"
+Source = "https://github.com/teruokun/apworld-packaging-tools"
 
 # =============================================================================
 # Hatch Environment Configuration
@@ -63,31 +63,31 @@ extra-dependencies = [
 python = ["3.11", "3.12", "3.13"]
 
 [tool.hatch.envs.hatch-test.scripts]
-apworld-version-tests = "pytest packages/apworld-version/tests {args:}"
-apworld-manifest-tests = "pytest packages/apworld-manifest/tests {args:}"
-apworld-vendor-tests = "pytest packages/apworld-vendor/tests {args:}"
-apworld-build-tests = "pytest packages/apworld-build/tests {args:}"
-apworld-api-tests = "pytest packages/apworld-api/tests {args:}"
-apworld-cli-tests = "pytest packages/apworld-cli/tests {args:}"
-apworld-integration-tests = "pytest tests {args:}"
+island-version-tests = "pytest packages/island-version/tests {args:}"
+island-manifest-tests = "pytest packages/island-manifest/tests {args:}"
+island-vendor-tests = "pytest packages/island-vendor/tests {args:}"
+island-build-tests = "pytest packages/island-build/tests {args:}"
+island-api-tests = "pytest packages/island-api/tests {args:}"
+island-cli-tests = "pytest packages/island-cli/tests {args:}"
+island-integration-tests = "pytest tests {args:}"
 
 run = [
-    "apworld-version-tests",
-    "apworld-manifest-tests",
-    "apworld-vendor-tests",
-    "apworld-build-tests",
-    "apworld-api-tests",
-    "apworld-cli-tests",
-    "apworld-integration-tests",
+    "island-version-tests",
+    "island-manifest-tests",
+    "island-vendor-tests",
+    "island-build-tests",
+    "island-api-tests",
+    "island-cli-tests",
+    "island-integration-tests",
 ]
 run-cov = [
-    "apworld-version-tests --cov=packages",
-    "apworld-manifest-tests --cov=packages",
-    "apworld-vendor-tests --cov=packages",
-    "apworld-build-tests --cov=packages",
-    "apworld-api-tests --cov=packages",
-    "apworld-cli-tests --cov=packages",
-    "apworld-integration-tests --cov=packages",
+    "island-version-tests --cov=packages",
+    "island-manifest-tests --cov=packages",
+    "island-vendor-tests --cov=packages",
+    "island-build-tests --cov=packages",
+    "island-api-tests --cov=packages",
+    "island-cli-tests --cov=packages",
+    "island-integration-tests --cov=packages",
 ]
 
 # =============================================================================
