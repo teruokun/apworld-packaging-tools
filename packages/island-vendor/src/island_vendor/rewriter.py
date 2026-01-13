@@ -293,17 +293,24 @@ def rewrite_imports(
     output_dir: str | Path,
     vendored_modules: set[str],
     config: "VendorConfig",
+    *,
+    rewrite_vendored: bool = True,
 ) -> list[RewriteResult]:
     """Rewrite imports in all Python files in a directory.
 
     This function recursively processes all .py files in source_dir,
     rewriting imports of vendored packages to use the vendor namespace.
 
+    When rewrite_vendored=True, also rewrites imports within the vendored
+    dependencies themselves (in the vendor directory).
+
     Args:
         source_dir: Directory containing source files
         output_dir: Directory to write rewritten files
         vendored_modules: Set of top-level module names that are vendored
         config: Vendor configuration
+        rewrite_vendored: If True, also rewrite imports within the vendor
+            directory (default: True)
 
     Returns:
         List of RewriteResult for each processed file
@@ -341,5 +348,64 @@ def rewrite_imports(
             out_file = output_path / rel_path
             out_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(other_file, out_file)
+
+    # Rewrite imports within the vendor directory if requested
+    if rewrite_vendored:
+        vendor_results = rewrite_vendored_imports(
+            output_path,
+            vendored_modules,
+            config,
+        )
+        results.extend(vendor_results)
+
+    return results
+
+
+def rewrite_vendored_imports(
+    output_dir: str | Path,
+    vendored_modules: set[str],
+    config: "VendorConfig",
+) -> list[RewriteResult]:
+    """Rewrite imports within vendored dependencies.
+
+    This function processes Python files in the vendor directory,
+    rewriting imports between vendored packages to use the vendor namespace.
+
+    For example, if scipy imports numpy, and both are vendored, the import
+    `import numpy` in scipy's code becomes `from my_game._vendor import numpy`.
+
+    Args:
+        output_dir: Directory containing the output (with vendor subdirectory)
+        vendored_modules: Set of top-level module names that are vendored
+        config: Vendor configuration
+
+    Returns:
+        List of RewriteResult for each processed file in the vendor directory
+
+    Raises:
+        ImportRewriteError: If rewriting fails for any file
+    """
+    output_path = Path(output_dir)
+
+    # Normalize package name to get the vendor directory path
+    normalized_name = config.package_name.replace("-", "_")
+    vendor_dir = output_path / normalized_name / config.namespace
+
+    if not vendor_dir.exists():
+        return []
+
+    results: list[RewriteResult] = []
+
+    # Process all Python files in the vendor directory
+    for py_file in vendor_dir.rglob("*.py"):
+        # Rewrite the file in place
+        result = rewrite_file(
+            py_file,
+            py_file,  # Output to same location (in-place rewrite)
+            vendored_modules,
+            config.vendor_namespace,
+            config.core_ap_modules,
+        )
+        results.append(result)
 
     return results

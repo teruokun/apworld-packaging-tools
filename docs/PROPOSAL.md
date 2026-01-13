@@ -50,12 +50,12 @@ The existing `.apworld` format used by Archipelago core has served the community
 
 | Issue | Impact |
 |-------|--------|
-| No declared dependencies | Users manually install requirements |
+| Dependencies are in a shared namespace | Archipelago must install dependencies and handle conflict resolution |
 | Opaque binary blobs | Can't inspect or audit without extraction |
 | No integrity verification | No checksums, no signatures |
 | Tight version coupling | APWorlds built for 0.6.0 fail on 0.6.1 |
-| No entry point declarations | Can't index or discover WebWorld implementations |
-| No platform tags | Can't distribute platform-specific builds |
+| No entry point declarations | Can't index or discover WebWorld implementations, relies on scanning/implicit load path |
+| No platform tags | Builds containing precompiled binaries can't represent their OS/Arch compatibility or if they need to be rebuilt locally |
 
 ### Our Solution: The Island Format
 

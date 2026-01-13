@@ -234,7 +234,7 @@ def _collect_package_files(
 def _generate_manifest(
     config: "BuildConfig",
     entry_points: Optional[dict[str, dict[str, str]]] = None,
-    vendored_dependencies: Optional[dict[str, str]] = None,
+    vendored_dependencies: Optional[dict[str, Any]] = None,
     is_pure_python: bool = True,
 ) -> dict[str, Any]:
     """Generate the island.json manifest.
@@ -242,7 +242,10 @@ def _generate_manifest(
     Args:
         config: Build configuration
         entry_points: Entry points dict (group -> {name -> value})
-        vendored_dependencies: Dict mapping package names to versions
+        vendored_dependencies: Dict with vendored package info including platform tags.
+            Can be either:
+            - Simple format: {package_name: version_string}
+            - Enhanced format: {package_name: {version, is_pure_python, platform_tags, ...}}
         is_pure_python: Whether the package is pure Python
 
     Returns:
@@ -303,6 +306,7 @@ def build_island(
     vendor_dir: str | Path | None = None,
     platform_tag: PlatformTag | None = None,
     entry_points: dict[str, dict[str, str]] | None = None,
+    vendored_dependencies_info: dict[str, Any] | None = None,
 ) -> IslandResult:
     """Build an Island binary distribution (.island).
 
@@ -317,6 +321,9 @@ def build_island(
         vendor_dir: Directory containing vendored dependencies
         platform_tag: Platform tag (auto-detected if not provided)
         entry_points: Entry points dict (group -> {name -> value})
+        vendored_dependencies_info: Enhanced vendored dependency info with platform tags.
+            If provided, this takes precedence over reading from vendor_manifest.json.
+            Format: {package_name: {version, is_pure_python, platform_tags, ...}}
 
     Returns:
         IslandResult with information about the created archive
@@ -331,7 +338,7 @@ def build_island(
     if not src_dir.exists():
         raise IslandError(f"Source directory does not exist: {src_dir}")
 
-    # Detect if pure Python
+    # Detect if pure Python from source and vendor directories
     has_native = _detect_native_extensions(src_dir)
     if vendor_dir:
         vendor_path = Path(vendor_dir)
@@ -339,6 +346,13 @@ def build_island(
             has_native = has_native or _detect_native_extensions(vendor_path)
 
     is_pure_python = not has_native
+
+    # Also check vendored dependencies info for platform-specific packages
+    if vendored_dependencies_info is not None:
+        for pkg_info in vendored_dependencies_info.values():
+            if isinstance(pkg_info, dict) and not pkg_info.get("is_pure_python", True):
+                is_pure_python = False
+                break
 
     # Determine platform tag
     if platform_tag is None:
@@ -349,15 +363,19 @@ def build_island(
     archive_path = output_path / filename
 
     # Collect vendored dependencies info
-    vendored_deps: dict[str, str] = {}
-    if vendor_dir:
+    vendored_deps: dict[str, Any] = {}
+    if vendored_dependencies_info is not None:
+        # Use provided enhanced info
+        vendored_deps = vendored_dependencies_info
+    elif vendor_dir:
+        # Fall back to reading from vendor_manifest.json
         vendor_path = Path(vendor_dir)
         vendor_manifest = vendor_path / "vendor_manifest.json"
         if vendor_manifest.exists():
             with open(vendor_manifest) as f:
                 vendor_data = json.load(f)
-                for pkg_name, pkg_info in vendor_data.get("vendored_packages", {}).items():
-                    vendored_deps[pkg_name] = pkg_info.get("version", "unknown")
+                # Use enhanced format from vendor manifest
+                vendored_deps = vendor_data.get("vendored_packages", {})
 
     # Generate manifest (includes entry_points if provided)
     manifest = _generate_manifest(config, entry_points, vendored_deps, is_pure_python)
@@ -501,7 +519,7 @@ def build_island_with_vendoring(
     This function handles the complete build process:
     1. Vendors dependencies to a temporary directory
     2. Rewrites imports in source files
-    3. Builds the Island archive
+    3. Builds the Island archive with platform tag from vendored dependencies
 
     Note: This function does NOT validate entry points. Use validate_entry_points()
     separately to enforce the Island format requirement for ap-island entry points.
@@ -510,7 +528,7 @@ def build_island_with_vendoring(
         config: Build configuration with package metadata
         output_dir: Directory to write the .island file
         source_dir: Source directory (defaults to config.source_dir)
-        platform_tag: Platform tag (auto-detected if not provided)
+        platform_tag: Platform tag (auto-detected from vendored dependencies if not provided)
         entry_points: Entry points dict (group -> {name -> value})
 
     Returns:
@@ -530,6 +548,9 @@ def build_island_with_vendoring(
 
         # Copy source files to build directory
         shutil.copytree(src_dir, build_dir)
+
+        # Track vendor result for platform tag propagation
+        vendor_result = None
 
         # Vendor dependencies if any
         if config.dependencies:
@@ -554,12 +575,42 @@ def build_island_with_vendoring(
                     config=vendor_config,
                 )
 
+        # Determine platform tag from vendored dependencies if not explicitly provided
+        effective_platform_tag = platform_tag
+        if effective_platform_tag is None and vendor_result is not None:
+            # Get platform tag from VendorResult
+            if vendor_result.platform_tag is not None:
+                # Convert island_vendor.PlatformTag to island_build.PlatformTag
+                vendor_tag = vendor_result.platform_tag
+                effective_platform_tag = PlatformTag(
+                    python=vendor_tag.python_tag,
+                    abi=vendor_tag.abi_tag,
+                    platform=vendor_tag.platform_tag,
+                )
+
+        # Extract enhanced vendored dependencies info from VendorResult
+        vendored_dependencies_info: dict[str, Any] | None = None
+        if vendor_result is not None and vendor_result.dependency_graph is not None:
+            vendored_dependencies_info = {}
+            for pkg_name, resolved_pkg in vendor_result.dependency_graph.packages.items():
+                vendored_dependencies_info[pkg_name] = {
+                    "version": resolved_pkg.version,
+                    "is_pure_python": resolved_pkg.is_pure_python,
+                    "platform_tags": resolved_pkg.platform_tags,
+                    "direct_dependencies": resolved_pkg.requires,
+                }
+            # Add module info from VendoredPackage
+            for pkg in vendor_result.packages:
+                if pkg.name in vendored_dependencies_info:
+                    vendored_dependencies_info[pkg.name]["modules"] = pkg.top_level_modules
+
         # Build the Island
         return build_island(
             config=config,
             output_dir=output_dir,
             source_dir=build_dir,
             vendor_dir=vendor_dir if config.dependencies else None,
-            platform_tag=platform_tag,
+            platform_tag=effective_platform_tag,
             entry_points=entry_points,
+            vendored_dependencies_info=vendored_dependencies_info,
         )

@@ -132,6 +132,10 @@ strict = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra -q --import-mode=importlib"
+markers = [
+    "integration: marks tests as integration tests (may require network access)",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
 
 [tool.coverage.run]
 branch = true

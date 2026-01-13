@@ -79,7 +79,7 @@ jobs:
           - ubuntu-latest        # Linux x64
           - ubuntu-24.04-arm     # Linux ARM64
           - macos-latest         # macOS Apple Silicon
-          - macos-13             # macOS Intel
+          - macos-15-intel       # macOS Intel
           - windows-latest       # Windows x64
           - windows-11-arm       # Windows ARM64
         python-version: ["3.11", "3.12", "3.13"]
@@ -150,7 +150,7 @@ jobs:
     if: github.event_name == 'release'
     environment:
       name: archipelago-repository
-      url: https://apworlds.archipelago.gg
+      url: https://islands.archipelago.gg/v1
 
     steps:
       - name: Download Island artifact
@@ -167,7 +167,7 @@ jobs:
       # id-token: write permission is set.
       - name: Publish to Archipelago Repository
         run: |
-          echo "Publishing to https://apworlds.archipelago.gg"
+          echo "Publishing to $(echo url)"
           echo "Island file: $(ls dist/*.island)"
           echo ""
           echo "NOTE: This is a placeholder step."

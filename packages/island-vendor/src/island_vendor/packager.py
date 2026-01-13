@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from .config import VendorConfig
 
 from .config import VendoredPackage, VendorResult
+from .resolver import DependencyResolver, DependencyResolverError
 
 
 class DependencyDownloadError(Exception):
@@ -185,16 +186,16 @@ def download_dependencies(
 
 
 def vendor_dependencies(
-    config: "VendorConfig",
+    config: VendorConfig,
     target_dir: str | Path,
     python_executable: str | None = None,
 ) -> VendorResult:
     """Vendor dependencies into a target directory.
 
     This function:
-    1. Downloads dependencies using pip
-    2. Extracts them to the target directory
-    3. Tracks which packages were vendored
+    1. Uses DependencyResolver to resolve all transitive dependencies
+    2. Downloads and extracts them to the target directory
+    3. Tracks which packages were vendored with platform information
 
     Args:
         config: Vendor configuration
@@ -209,23 +210,41 @@ def vendor_dependencies(
     if not config.dependencies:
         return result
 
-    # Filter dependencies based on config
-    deps_to_vendor: list[str] = []
-    for dep in config.dependencies:
-        pkg_name = _parse_requirement(dep)
-        if config.should_vendor(pkg_name):
-            deps_to_vendor.append(dep)
+    # Create the resolver with exclusion rules
+    resolver = DependencyResolver(
+        exclude_packages=set(config.exclude),
+        core_ap_modules=config.core_ap_modules,
+    )
 
-    if not deps_to_vendor:
+    # Resolve all dependencies including transitive ones
+    try:
+        dependency_graph = resolver.resolve_and_filter(
+            config.dependencies,
+            python_executable,
+        )
+    except DependencyResolverError as e:
+        result.errors.append(str(e))
         return result
+
+    # If no packages to vendor after filtering, return early
+    if not dependency_graph.packages:
+        return result
+
+    # Store the dependency graph in the result
+    result.dependency_graph = dependency_graph
 
     # Create a temporary directory for downloading
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
 
+        # Download all resolved packages
+        packages_to_download = [
+            f"{pkg.name}=={pkg.version}" for pkg in dependency_graph.packages.values()
+        ]
+
         try:
             download_dependencies(
-                deps_to_vendor,
+                packages_to_download,
                 temp_path,
                 python_executable,
             )
@@ -237,16 +256,13 @@ def vendor_dependencies(
         target_path = Path(target_dir)
         target_path.mkdir(parents=True, exist_ok=True)
 
-        for dep in deps_to_vendor:
-            pkg_name = _parse_requirement(dep)
-
+        for pkg_name, resolved_pkg in dependency_graph.packages.items():
             try:
                 # Get package info
-                version = _get_package_version(temp_path, pkg_name)
+                version = resolved_pkg.version
                 top_level = _get_top_level_modules(temp_path)
 
                 # Filter to modules that match this package
-                # (temp_path may contain multiple packages)
                 pkg_modules = [
                     m
                     for m in top_level
@@ -276,7 +292,14 @@ def vendor_dependencies(
                 result.packages.append(vendored_pkg)
 
             except Exception as e:
-                result.errors.append(f"Failed to vendor {pkg_name}: {e}")
+                # Include dependency chain in error message
+                chain = dependency_graph.get_dependency_chain(pkg_name)
+                chain_str = " -> ".join(chain) if chain else pkg_name
+                result.errors.append(
+                    f"Failed to vendor '{pkg_name}':\n"
+                    f"  Dependency chain: {chain_str}\n"
+                    f"  Error: {e}"
+                )
 
     # Create __init__.py in vendor directory if it doesn't exist
     init_file = Path(target_dir) / "__init__.py"
@@ -286,6 +309,10 @@ def vendor_dependencies(
             '"""Vendored dependencies for this Island package."""\n',
             encoding="utf-8",
         )
+
+    # Compute platform information from the dependency graph
+    result.is_pure_python = dependency_graph.is_pure_python()
+    result.platform_tag = dependency_graph.get_most_restrictive_tag()
 
     return result
 
@@ -297,20 +324,65 @@ def create_vendor_manifest(
     """Create a manifest file listing vendored packages.
 
     This creates a JSON file that records which packages were vendored
-    and their versions, useful for debugging and auditing.
+    and their versions, useful for debugging and auditing. The manifest
+    includes dependency graph information and platform tags.
 
     Args:
         result: VendorResult from vendor_dependencies
         output_path: Path to write the manifest file
     """
-    manifest = {
-        "vendored_packages": {
-            pkg.name: {
+    # Build vendored_packages with enhanced information
+    vendored_packages: dict[str, dict] = {}
+    dependency_graph_data: dict[str, list[str]] = {}
+    root_dependencies: list[str] = []
+
+    # If we have a dependency graph, use it for enhanced information
+    if result.dependency_graph is not None:
+        root_dependencies = list(result.dependency_graph.root_dependencies)
+
+        for pkg_name, resolved_pkg in result.dependency_graph.packages.items():
+            vendored_packages[pkg_name] = {
+                "version": resolved_pkg.version,
+                "modules": [],  # Will be filled from VendoredPackage if available
+                "is_pure_python": resolved_pkg.is_pure_python,
+                "platform_tags": resolved_pkg.platform_tags,
+                "direct_dependencies": resolved_pkg.requires,
+            }
+            dependency_graph_data[pkg_name] = resolved_pkg.requires
+
+        # Merge module information from VendoredPackage
+        for pkg in result.packages:
+            if pkg.name in vendored_packages:
+                vendored_packages[pkg.name]["modules"] = pkg.top_level_modules
+            else:
+                # Package not in dependency graph, add it
+                vendored_packages[pkg.name] = {
+                    "version": pkg.version,
+                    "modules": pkg.top_level_modules,
+                    "is_pure_python": True,  # Default assumption
+                    "platform_tags": [],
+                    "direct_dependencies": [],
+                }
+                dependency_graph_data[pkg.name] = []
+    else:
+        # No dependency graph, use basic information from packages
+        for pkg in result.packages:
+            vendored_packages[pkg.name] = {
                 "version": pkg.version,
                 "modules": pkg.top_level_modules,
+                "is_pure_python": True,  # Default assumption without graph
+                "platform_tags": [],
+                "direct_dependencies": [],
             }
-            for pkg in result.packages
-        }
+            dependency_graph_data[pkg.name] = []
+
+    # Build the manifest
+    manifest: dict = {
+        "vendored_packages": vendored_packages,
+        "dependency_graph": dependency_graph_data,
+        "root_dependencies": root_dependencies,
+        "is_pure_python": result.is_pure_python,
+        "effective_platform_tag": str(result.platform_tag) if result.platform_tag else None,
     }
 
     output = Path(output_path)

@@ -10,7 +10,11 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .platform import PlatformTag
+    from .resolver import DependencyGraph
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -251,11 +255,17 @@ class VendorResult:
         packages: List of vendored packages
         target_dir: Directory where packages were vendored
         errors: List of error messages for packages that failed to vendor
+        dependency_graph: Graph of resolved dependencies with transitive relationships
+        is_pure_python: True if all vendored packages are pure Python (no native extensions)
+        platform_tag: Most restrictive platform tag from vendored packages
     """
 
     packages: list[VendoredPackage] = field(default_factory=list)
     target_dir: Path | None = None
     errors: list[str] = field(default_factory=list)
+    dependency_graph: "DependencyGraph | None" = None
+    is_pure_python: bool = True
+    platform_tag: "PlatformTag | None" = None
 
     @property
     def success(self) -> bool:

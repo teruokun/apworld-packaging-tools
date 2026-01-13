@@ -38,6 +38,13 @@ from .packager import (
     download_dependencies,
     vendor_dependencies,
 )
+from .resolver import (
+    DependencyChainError,
+    DependencyGraph,
+    DependencyResolver,
+    DependencyResolverError,
+    ResolvedDependency,
+)
 from .rewriter import (
     ImportRewriteError,
     ImportRewriter,
@@ -45,6 +52,16 @@ from .rewriter import (
     rewrite_file,
     rewrite_imports,
     rewrite_source,
+)
+from .platform import (
+    PlatformTag,
+    compute_most_restrictive_tag,
+    detect_native_extensions,
+    detect_package_platform,
+    parse_wheel_filename_tags,
+    parse_wheel_tags,
+    check_platform_compatibility,
+    get_platform_compatibility,
 )
 
 __all__ = [
@@ -54,6 +71,12 @@ __all__ = [
     "VendoredPackage",
     "VendorResult",
     "CORE_AP_MODULES",
+    # Resolver
+    "DependencyChainError",
+    "DependencyGraph",
+    "DependencyResolver",
+    "DependencyResolverError",
+    "ResolvedDependency",
     # Packager
     "vendor_dependencies",
     "download_dependencies",
@@ -67,4 +90,13 @@ __all__ = [
     "RewriteResult",
     "ImportRewriter",
     "ImportRewriteError",
+    # Platform
+    "PlatformTag",
+    "compute_most_restrictive_tag",
+    "detect_native_extensions",
+    "detect_package_platform",
+    "parse_wheel_filename_tags",
+    "parse_wheel_tags",
+    "check_platform_compatibility",
+    "get_platform_compatibility",
 ]

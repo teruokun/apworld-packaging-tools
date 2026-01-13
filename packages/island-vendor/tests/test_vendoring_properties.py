@@ -27,11 +27,56 @@ from island_vendor.rewriter import rewrite_source
 # Strategies for generating test data
 # =============================================================================
 
-# Valid Python module names
-valid_module_names = st.from_regex(r"[a-z][a-z0-9_]{0,15}", fullmatch=True)
+# Python keywords that cannot be used as module names
+PYTHON_KEYWORDS = frozenset(
+    {
+        "False",
+        "None",
+        "True",
+        "and",
+        "as",
+        "assert",
+        "async",
+        "await",
+        "break",
+        "class",
+        "continue",
+        "def",
+        "del",
+        "elif",
+        "else",
+        "except",
+        "finally",
+        "for",
+        "from",
+        "global",
+        "if",
+        "import",
+        "in",
+        "is",
+        "lambda",
+        "nonlocal",
+        "not",
+        "or",
+        "pass",
+        "raise",
+        "return",
+        "try",
+        "while",
+        "with",
+        "yield",
+    }
+)
 
-# Valid package names (can include hyphens)
-valid_package_names = st.from_regex(r"[a-z][a-z0-9_]{0,15}", fullmatch=True)
+# Valid Python module names (excluding keywords)
+valid_module_names = st.from_regex(r"[a-z][a-z0-9_]{0,15}", fullmatch=True).filter(
+    lambda x: x not in PYTHON_KEYWORDS
+)
+
+# Valid package names (can include hyphens, excluding keywords)
+valid_package_names = st.from_regex(r"[a-z][a-z0-9_]{0,15}", fullmatch=True).filter(
+    lambda x: x not in PYTHON_KEYWORDS
+)
 
 # Valid class names
 valid_class_names = st.from_regex(r"[A-Z][a-zA-Z0-9]{0,15}", fullmatch=True)

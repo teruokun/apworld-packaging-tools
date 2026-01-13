@@ -28,7 +28,7 @@ from ..config import ConfigError
 from ..main import Context, echo_error, echo_info, echo_success, echo_warning, pass_context
 
 
-DEFAULT_REPOSITORY = "https://api.archipelago.gg/v1"
+DEFAULT_REPOSITORY = "https://islands.archipelago.gg/v1"
 
 
 def _compute_sha256(file_path: Path) -> str:
